@@ -1,0 +1,53 @@
+name: IMDB data pipeline
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  cleaning:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Get repository files
+        uses: actions/checkout@v4
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Install dependencies
+        run: python -m pip install -r requirements.txt
+      - name: Clean and aggregate all incoming batches
+        run: python clean.py
+      - name: Send cleaned data to next job
+        uses: actions/upload-artifact@v4
+        with:
+          name: clean-movies
+          path: output/clean_movies.csv
+
+  processing:
+    needs: cleaning
+    runs-on: ubuntu-latest
+    steps:
+      - name: Get repository files
+        uses: actions/checkout@v4
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Install dependencies
+        run: python -m pip install -r requirements.txt
+      - name: Receive cleaned data from first job
+        uses: actions/download-artifact@v4
+        with:
+          name: clean-movies
+          path: output
+      - name: Compute indicators
+        run: python process.py
+      - name: Produce the HTML dashboard
+        run: python export_report.py
+      - name: Publish final dashboard as an artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: imdb-dashboard
+          path: output/imdb_dashboard.html

@@ -1,0 +1,5 @@
+__pycache__/
+.venv/
+output/*.csv
+output/*.html
+.DS_Store
